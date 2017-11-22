@@ -30,32 +30,63 @@ my $db = {
 	'tpch' => "tpch_flat_orc_$scale"
 };
 
-print "filename,status,time,rows\n";
+my $iterations = 3;
+my @output = [];
+
+#print "filename,status,raw time,time,rows\n";
 for my $query ( @queries ) {
-	my $logname = "$query.log";
-	my $cmd="echo 'use $db->{${suite}}; source $query;' | hive -i testbench.settings 2>&1  | tee $query.log";
-#	my $cmd="cat $query.log";
-	#print $cmd ; exit;
-	
-	my $hiveStart = time();
+        my $counter = 1;
+        my @runs = [];
 
-	my @hiveoutput=`$cmd`;
-	die "${SCRIPT_NAME}:: ERROR:  hive command unexpectedly exited \$? = '$?', \$! = '$!'" if $?;
+        print "Running " . $query . " ...\n";
+ 
+        while ($counter <= $iterations) {
+            print "  iteration " . $counter . "\t";
 
-	my $hiveEnd = time();
-	my $hiveTime = $hiveEnd - $hiveStart;
-	foreach my $line ( @hiveoutput ) {
-		if( $line =~ /Time taken:\s+([\d\.]+)\s+seconds,\s+Fetched:\s+(\d+)\s+row/ ) {
-			print "$query,success,$hiveTime,$2\n"; 
-		} elsif( 
-			$line =~ /^FAILED: /
-			# || /Task failed!/ 
-			) {
-			print "$query,failed,$hiveTime\n"; 
-		} # end if
-	} # end while
+	    my $logname = "$query.log";
+	    my $cmd="echo 'use $db->{${suite}}; source $query;' | hive 2>&1  | tee $query.log";
+	    
+	    my @hiveoutput=`$cmd`;
+	    die "${SCRIPT_NAME}:: ERROR:  hive command unexpectedly exited \$? = '$?', \$! = '$!'" if $?;
+
+	    foreach my $line ( @hiveoutput ) {
+		    if ( $line =~ /Time taken:\s+([\d\.]+)\s+seconds,\s+Fetched:\s+(\d+)\s+row/ ) {
+                            push @runs, $1;
+			    print "$query,success,$1,$2\n"; 
+		    } elsif ( $line =~ /^FAILED: / ) {
+			    print "$query,failed\n"; 
+			    push @output, "$query,failed\n"; 
+                            $counter = 3;
+                    } # end if
+	    } # end foreach
+        $counter += 1;
+    } # end of while
+
+#    my $totalRun = 0;
+#    $totalRun = $totalRun += 1 for @runs;
+#   
+#    print  "Total Runs: " . $totalRun;
+#
+#    my $sumRun = 0; 
+#    if ( $totalRun >= 3 ) {
+#
+#      for my $run (@runs) {
+#        $sumRun += $run;
+#        print $sumRun;
+#      }
+#
+#      print "Sum of Runs: " . $sumRun;
+#      my $averageRun = $sumRun/$totalRun;
+#
+#      print "$query,success,$averageRun\n"; 
+#      push @output, "$query,success,$averageRun\n"; 
+#    } # end if
 } # end for
 
+#foreach my $item (@output) {
+#    print $item . "\n";
+#}
+    
 
 sub dieWithUsage(;$) {
 	my $err = shift || '';
