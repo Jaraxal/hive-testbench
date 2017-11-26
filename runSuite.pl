@@ -44,16 +44,22 @@ for my $query ( @queries ) {
             print "  iteration " . $counter . "\t";
 
 	    my $logname = "$query.log";
-	    my $cmd="echo 'use $db->{${suite}}; source $query;' | hive 2>&1  | tee $query.log";
+            # Change hostname for HiveServer2
+            my $cmd="beeline -u jdbc:hive2://ip-10-0-0-227.jaraxal.com:10000/tpcds_bin_partitioned_orc_1000 -n cloudbreak -p cloudbreak -f $query 2>&1 | tee $query.log";
+	    #my $cmd="echo 'use $db->{${suite}}; source $query;' | hive 2>&1  | tee $query.log";
 	    
 	    my @hiveoutput=`$cmd`;
 	    die "${SCRIPT_NAME}:: ERROR:  hive command unexpectedly exited \$? = '$?', \$! = '$!'" if $?;
 
 	    foreach my $line ( @hiveoutput ) {
+                    # Query responses come back in two different forms.
 		    if ( $line =~ /Time taken:\s+([\d\.]+)\s+seconds,\s+Fetched:\s+(\d+)\s+row/ ) {
                             push @runs, $1;
 			    print "$query,success,$1,$2\n"; 
-		    } elsif ( $line =~ /^FAILED: / ) {
+		    } elsif ( $line =~ /^(\d+\,?\d*) row[s]?\s+selected\s+\(([\d\.]+)\s+seconds\)/ ) {
+                            push @runs, $2;
+			    print "$query,success,$2,$1\n"; 
+		    } elsif ( $line =~ /FAILED: / ) {
 			    print "$query,failed\n"; 
 			    push @output, "$query,failed\n"; 
                             $counter = 3;
