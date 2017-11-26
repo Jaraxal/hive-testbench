@@ -45,8 +45,8 @@ for my $query ( @queries ) {
 
 	    my $logname = "$query.log";
             # Change hostname for HiveServer2
-            my $cmd="beeline -u jdbc:hive2://ip-10-0-0-227.jaraxal.com:10000/tpcds_bin_partitioned_orc_1000 -n cloudbreak -p cloudbreak -f $query 2>&1 | tee $query.log";
-	    #my $cmd="echo 'use $db->{${suite}}; source $query;' | hive 2>&1  | tee $query.log";
+            my $cmd="beeline -u jdbc:hive2://ip-10-0-0-227.jaraxal.com:10000/tpcds_bin_partitioned_orc_1000 -n cloudbreak -p cloudbreak -f $query 2>&1 | tee $query.$counter.log";
+	    #my $cmd="echo 'use $db->{${suite}}; source $query;' | hive 2>&1  | tee $query.$counter.log";
 	    
 	    my @hiveoutput=`$cmd`;
 	    die "${SCRIPT_NAME}:: ERROR:  hive command unexpectedly exited \$? = '$?', \$! = '$!'" if $?;
