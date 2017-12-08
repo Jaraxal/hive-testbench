@@ -23,6 +23,7 @@ if( $suite eq 'tpcds' ) {
 } else {
 	chdir 'sample-queries-tpch';
 } # end if
+
 my @queries = glob '*.sql';
 
 my $db = { 
@@ -30,43 +31,44 @@ my $db = {
 	'tpch' => "tpch_flat_orc_$scale"
 };
 
-my $iterations = 3;
-my @output = [];
+my $iterations = 5;
+#my @output = [];
 
 #print "filename,status,raw time,time,rows\n";
 for my $query ( @queries ) {
-        my $counter = 1;
-        my @runs = [];
+	my $counter = 1;
+	#my @runs = [];
 
-        print "Running " . $query . " ...\n";
- 
-        while ($counter <= $iterations) {
-            print "  iteration " . $counter . "\t";
+	print "Running " . $query . " ...\n";
 
-	    my $logname = "$query.log";
-            # Change hostname for HiveServer2
-            my $cmd="beeline -u jdbc:hive2://ip-10-0-0-227.jaraxal.com:10000/tpcds_bin_partitioned_orc_1000 -n cloudbreak -p cloudbreak -f $query 2>&1 | tee $query.$counter.log";
-	    #my $cmd="echo 'use $db->{${suite}}; source $query;' | hive 2>&1  | tee $query.$counter.log";
-	    
-	    my @hiveoutput=`$cmd`;
-	    die "${SCRIPT_NAME}:: ERROR:  hive command unexpectedly exited \$? = '$?', \$! = '$!'" if $?;
+	while ($counter <= $iterations) {
+		print "  iteration " . $counter . "\t";
 
-	    foreach my $line ( @hiveoutput ) {
-                    # Query responses come back in two different forms.
-		    if ( $line =~ /Time taken:\s+([\d\.]+)\s+seconds,\s+Fetched:\s+(\d+)\s+row/ ) {
-                            push @runs, $1;
-			    print "$query,success,$1,$2\n"; 
-		    } elsif ( $line =~ /^(\d+\,?\d*) row[s]?\s+selected\s+\(([\d\.]+)\s+seconds\)/ ) {
-                            push @runs, $2;
-			    print "$query,success,$2,$1\n"; 
-		    } elsif ( $line =~ /FAILED: / ) {
-			    print "$query,failed\n"; 
-			    push @output, "$query,failed\n"; 
-                            $counter = 3;
-                    } # end if
-	    } # end foreach
-        $counter += 1;
-    } # end of while
+	my $logname = "$query.log";
+	
+	# Change hostname for HiveServer2
+	#my $cmd="beeline -u jdbc:hive2://ip-10-0-0-227.jaraxal.com:10000/tpcds_bin_partitioned_orc_1000 -n cloudbreak -p cloudbreak -f $query 2>&1 | tee $query.$counter.log";
+	my $cmd="echo 'use $db->{${suite}}; source $query;' | hive 2>&1  | tee $query.$counter.log";
+	
+	my @hiveoutput=`$cmd`;
+	die "${SCRIPT_NAME}:: ERROR:  hive command unexpectedly exited \$? = '$?', \$! = '$!'" if $?;
+
+	foreach my $line ( @hiveoutput ) {
+		# Query responses come back in two different formats.
+		if ( $line =~ /Time taken:\s+([\d\.]+)\s+seconds,\s+Fetched:\s+(\d+)\s+row/ ) {
+			#push @runs, $1;
+			print "$query,success,$1,$2\n"; 
+		} elsif ( $line =~ /^(\d+\,?\d*) row[s]?\s+selected\s+\(([\d\.]+)\s+seconds\)/ ) {
+			#push @runs, $2;
+			print "$query,success,$2,$1\n"; 
+		} elsif ( $line =~ /FAILED: / ) {
+			print "$query,failed\n"; 
+			#push @output, "$query,failed\n"; 
+			$counter = $iterations;
+		} # end if
+	} # end foreach
+	$counter += 1;
+} # end of while
 
 #    my $totalRun = 0;
 #    $totalRun = $totalRun += 1 for @runs;
